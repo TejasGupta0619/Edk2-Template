@@ -1,0 +1,191 @@
+{
+  "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "moduleName",
+      "type": "promptString",
+      "description": "Module name (e.g., HelloSmm)",
+      "default": "HelloSmm"
+    },
+    {
+      "id": "moduleType",
+      "type": "pickString",
+      "description": "Module type",
+      "options": ["smm", "dxe", "uefi_app", "pei"],
+      "default": "smm"
+    },
+    {
+      "id": "buildTarget",
+      "type": "pickString",
+      "description": "Build target",
+      "options": ["release", "debug"],
+      "default": "release"
+    }
+  ],
+  "tasks": [
+    {
+      "label": "Build: Full OVMF",
+      "type": "shell",
+      "command": "${workspaceFolder}\\scripts\\build.bat",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": {
+        "owner": "edk2",
+        "fileLocation": ["autoDetect", "${workspaceFolder}"],
+        "pattern": [
+          {
+            "regexp": "^(.+?)\\((\\d+)\\)\\s*:\\s*(error|warning)\\s+(C\\d+|LNK\\d+|E\\d+)?:?\\s*(.+)$",
+            "file": 1,
+            "line": 2,
+            "severity": 3,
+            "code": 4,
+            "message": 5
+          }
+        ]
+      },
+      "presentation": { "reveal": "always", "clear": true }
+    },
+    {
+      "label": "Build: Current Module",
+      "type": "shell",
+      "command": "${workspaceFolder}\\scripts\\build_module.bat",
+      "args": ["${relativeFileDirname}"],
+      "group": "build",
+      "problemMatcher": {
+        "owner": "edk2",
+        "fileLocation": ["autoDetect", "${workspaceFolder}"],
+        "pattern": [
+          {
+            "regexp": "^(.+?)\\((\\d+)\\)\\s*:\\s*(error|warning)\\s+(C\\d+|LNK\\d+|E\\d+)?:?\\s*(.+)$",
+            "file": 1,
+            "line": 2,
+            "severity": 3,
+            "code": 4,
+            "message": 5
+          }
+        ]
+      },
+      "presentation": { "reveal": "always", "clear": true }
+    },
+    {
+      "label": "Build: Pick Module...",
+      "type": "shell",
+      "command": "${workspaceFolder}\\scripts\\build_module.bat",
+      "args": ["${input:moduleName}"],
+      "group": "build",
+      "problemMatcher": {
+        "owner": "edk2",
+        "fileLocation": ["autoDetect", "${workspaceFolder}"],
+        "pattern": [
+          {
+            "regexp": "^(.+?)\\((\\d+)\\)\\s*:\\s*(error|warning)\\s+(C\\d+|LNK\\d+|E\\d+)?:?\\s*(.+)$",
+            "file": 1,
+            "line": 2,
+            "severity": 3,
+            "code": 4,
+            "message": 5
+          }
+        ]
+      }
+    },
+    {
+      "label": "Build: Clean",
+      "type": "shell",
+      "command": "${workspaceFolder}\\scripts\\build.bat",
+      "args": ["clean"],
+      "group": "build"
+    },
+    {
+      "label": "Run: QEMU with SMM",
+      "type": "shell",
+      "command": "${workspaceFolder}\\scripts\\run_qemu.bat",
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Run: View Debug Log",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-Command",
+        "if(Test-Path '${workspaceFolder}\\debug.log'){Get-Content '${workspaceFolder}\\debug.log' -Tail 100}else{Write-Host 'No debug.log yet'}"
+      ],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Run: Watch Debug Log (Live)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-Command",
+        "Get-Content '${workspaceFolder}\\debug.log' -Wait -Tail 30"
+      ],
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Lint: Current Module",
+      "type": "shell",
+      "command": "${workspaceFolder}\\scripts\\lint.bat",
+      "args": ["${relativeFileDirname}"],
+      "group": "test",
+      "problemMatcher": {
+        "owner": "cppcheck",
+        "fileLocation": ["autoDetect", "${workspaceFolder}"],
+        "pattern": {
+          "regexp": "^(.+?):(\\d+):\\s+\\((error|warning|style|performance)\\)\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "severity": 3,
+          "message": 4
+        }
+      }
+    },
+    {
+      "label": "Lint: Pick Module...",
+      "type": "shell",
+      "command": "${workspaceFolder}\\scripts\\lint.bat",
+      "args": ["${input:moduleName}"],
+      "group": "test"
+    },
+    {
+      "label": "New: Create Module",
+      "type": "shell",
+      "command": "${workspaceFolder}\\scripts\\new_module.bat",
+      "args": ["${input:moduleName}", "${input:moduleType}"],
+      "presentation": { "reveal": "always" }
+    },
+    {
+      "label": "View: Build Report",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-Command",
+        "if(Test-Path '${workspaceFolder}\\build_parsed.log'){Get-Content '${workspaceFolder}\\build_parsed.log'}else{Write-Host 'No build report yet. Run a build first.'}"
+      ],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "View: Build Artifacts",
+      "type": "shell",
+      "command": "cmd",
+      "args": [
+        "/c",
+        "dir /s /b ${workspaceFolder}\\build\\*.efi 2>nul || echo No .efi files found. Build first."
+      ],
+      "presentation": { "reveal": "always" }
+    },
+    {
+      "label": "Setup: Create Symlink (Admin)",
+      "type": "shell",
+      "command": "${workspaceFolder}\\scripts\\setup_symlink.bat"
+    },
+    {
+      "label": "Setup: Patch DSC",
+      "type": "shell",
+      "command": "${workspaceFolder}\\scripts\\patch_dsc.bat"
+    }
+  ]
+}

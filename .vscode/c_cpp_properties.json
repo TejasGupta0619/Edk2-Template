@@ -1,0 +1,54 @@
+{
+  "configurations": [
+    {
+      "name": "EDK2-SMM",
+      "includePath": [
+        "${workspaceFolder}/**",
+
+        "D:/Tools-Extras/Efi_Build/edk2/MdePkg/Include",
+        "D:/Tools-Extras/Efi_Build/edk2/MdePkg/Include/X64",
+
+        "D:/Tools-Extras/Efi_Build/edk2/MdeModulePkg/Include",
+
+        "D:/Tools-Extras/Efi_Build/edk2/OvmfPkg/Include",
+
+        "D:/Tools-Extras/Efi_Build/edk2/UefiCpuPkg/Include",
+
+        "D:/Tools-Extras/Efi_Build/edk2/SecurityPkg/Include",
+
+        "D:/Tools-Extras/Efi_Build/edk2/NetworkPkg/Include",
+
+        "D:/Tools-Extras/Efi_Build/edk2/CryptoPkg/Include",
+
+        "D:/Tools-Extras/Efi_Build/edk2/ShellPkg/Include",
+
+        "D:/Tools-Extras/Efi_Build/edk2/MdePkg",
+        "D:/Tools-Extras/Efi_Build/edk2/MdePkg/Test/UnitTest/Include",
+        "D:/Tools-Extras/Efi_Build/edk2/MdePkg/Test/Mock/Include",
+        "D:/Tools-Extras/Efi_Build/edk2/MdePkg/Library/MipiSysTLib/mipisyst/library/include",
+
+        "D:/Tools-Extras/Efi_Build/edk2/OvmfPkg",
+
+        "D:/Tools-Extras/Efi_Build/edk2/Build/OvmfX64/RELEASE_VS2022/X64/BoltPkg/*/DEBUG",
+        "D:/Tools-Extras/Efi_Build/edk2/Build/OvmfX64/RELEASE_VS2022/X64/**"
+      ],
+      "defines": [
+        "MDE_CPU_X64",
+        "EFIAPI=__cdecl",
+        "_MSC_VER=1944",
+        "_MSC_EXTENSIONS",
+        "PI_SPECIFICATION_VERSION=0x00010040",
+        "EFI_SPECIFICATION_VERSION=0x00020070",
+        "MDEPKG_NDEBUG",
+        "DISABLE_NEW_DEPRECATED_INTERFACES",
+        "TDX_GUEST_SUPPORTED",
+        "ENABLE_MD5_DEPRECATED_INTERFACES",
+        "UNICODE"
+      ],
+      "compilerPath": "C:/Program Files/Microsoft Visual Studio/2022/Professional/VC/Tools/MSVC/14.44.35207/bin/Hostx86/x64/cl.exe",
+      "cStandard": "c11",
+      "intelliSenseMode": "windows-msvc-x64"
+    }
+  ],
+  "version": 4
+}

@@ -1,0 +1,25 @@
+{
+  "C_Cpp.default.cStandard": "c11",
+  "C_Cpp.default.intelliSenseMode": "windows-msvc-x64",
+  "C_Cpp.errorSquiggles": "enabled",
+
+  "files.associations": {
+    "*.c": "c",
+    "*.h": "c",
+    "*.inf": "ini",
+    "*.dsc": "ini",
+    "*.dec": "ini",
+    "*.fdf": "ini"
+  },
+
+  "files.exclude": {
+    "**/build/**/*.map": true,
+    "**/build/**/*.pdb": true
+  },
+
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.rulers": [120],
+
+  "terminal.integrated.defaultProfile.windows": "Command Prompt"
+}

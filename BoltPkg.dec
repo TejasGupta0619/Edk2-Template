@@ -1,0 +1,14 @@
+[Defines]
+  DEC_SPECIFICATION = 0x00010005
+  PACKAGE_NAME      = BoltPkg
+  PACKAGE_GUID      = 6ba45798-34b8-4ad0-8ac9-b1775160ce00
+  PACKAGE_VERSION   = 1.0
+
+[Includes]
+  Include
+
+[Guids]
+
+[Protocols]
+
+[PcdsFixedAtBuild]
