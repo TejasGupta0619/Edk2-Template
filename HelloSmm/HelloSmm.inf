@@ -16,6 +16,7 @@
 
 [Sources]
   HelloSmm.c
+  logging/memory_log.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -28,6 +29,8 @@
 
 [Protocols]
   gEfiMmCpuIoProtocolGuid
-
+  gEfiSmmCpuProtocolGuid
+  gEfiSmmPeriodicTimerDispatch2ProtocolGuid
+  
 [Depex]
   gEfiMmCpuIoProtocolGuid
