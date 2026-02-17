@@ -4,7 +4,7 @@
 *
 --*/
 
-#include "../logging/log_levels.h"
+#include "./logging/log_levels.h"
 
 #ifndef __plouton_config_h__
 #define __plouton_config_h__
@@ -21,7 +21,7 @@
  * This variable is used to indicate if and what serial level debug should be used.
  * See logging.h for available options
  */
-#define SERIAL_DEBUG_LEVEL LOG_LEVEL_DBG
+#define SERIAL_DEBUG_LEVEL LOG_LEVEL_INFO
 
 /*
  * Memory logging configuration.
@@ -51,11 +51,11 @@
  * This is independent from SERIAL_DEBUG_LEVEL to allow keeping serial chatty
  * while trimming what gets persisted in memory.
  */
-#define MEMORY_LOG_MIN_LEVEL LOG_LEVEL_DBG
+#define MEMORY_LOG_MIN_LEVEL LOG_LEVEL_INFO
 
 // Cheat features
 #define ENABLE_SOUND FALSE
-#define ENABLE_AIM TRUE
+#define ENABLE_AIM FALSE
 
 // DRIVERS
 #define MOUSE_DRIVER_LOGITECH_G_PRO

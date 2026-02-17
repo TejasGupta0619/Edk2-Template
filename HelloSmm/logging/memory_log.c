@@ -2,10 +2,6 @@
 
 #if ENABLE_MEMORY_LOG
 
-#ifdef SERIAL_LOG
-#include "../hardware/serial.h"
-#endif
-
 #include <Library/BaseMemoryLib.h>
 #include <Library/PrintLib.h>
 #include <Library/UefiLib.h>
@@ -30,34 +26,29 @@ EFI_STATUS EFIAPI InitMemoryLog(IN EFI_BOOT_SERVICES *a_gBS)
     // Allocate pages for our log buffer
     // Calculate the number of pages needed, rounding up if necessary
     UINTN PagesNeeded = (MEM_LOG_BUFFER_SIZE + EFI_PAGE_SIZE - 1) / EFI_PAGE_SIZE;
+    EFI_PHYSICAL_ADDRESS BufferAddress = 0;
 
     Status = a_gBS->AllocatePages(
         AllocateAnyPages,
-        EfiRuntimeServicesData, // Use runtime memory so it persists after ExitBootServices if needed
+        EfiReservedMemoryType, // Use runtime memory so it persists after ExitBootServices if needed
         PagesNeeded,
-        &gMemoryLogBufferAddress);
+        &BufferAddress);
 
     if (EFI_ERROR(Status))
     {
-// We can't use our memory logger yet, so fall back to serial
-#ifdef SERIAL_LOG
-        SerialPrintf("Failed to allocate memory for log buffer.\n");
-#endif
-
+        // We can't use our memory logger yet, so fall back to serial
         gMemoryLogBufferAddress = 0;
         return Status;
     }
 
     // Zero out the buffer
-    SetMem((VOID *)(UINTN)gMemoryLogBufferAddress, MEM_LOG_BUFFER_SIZE, 0);
+    SetMem((VOID *)(UINTN)BufferAddress, MEM_LOG_BUFFER_SIZE, 0);
+    gMemoryLogBufferAddress = BufferAddress;
     gMemoryLogCursor = 0;
     gMemoryLogWrapCount = 0;
     gMemoryLogTimestamp = 0;
 
-// IMPORTANT: Log the physical address. The user needs this for their memory inspection tool.
-#ifdef SERIAL_LOG
-    SerialPrintf("\033[1;33m(I) [MEMLOG] Memory Log initialized. Buffer size: %d bytes at physical address: 0x%llx\n\033[0;39;49m", MEM_LOG_BUFFER_SIZE, gMemoryLogBufferAddress);
-#endif
+    // IMPORTANT: Log the physical address. The user needs this for their memory inspection tool.
 
     return EFI_SUCCESS;
 }
@@ -70,7 +61,7 @@ STATIC VOID WriteLogEntry(IN UINT8 LogLevel, IN CONST CHAR8 *LogData, IN UINTN L
         return;
     }
 
-    if (LogLevel < MEMORY_LOG_MIN_LEVEL)
+    if (LogLevel > MEMORY_LOG_MIN_LEVEL)
     {
         return;
     }
@@ -126,7 +117,7 @@ STATIC VOID WriteLogEntry(IN UINT8 LogLevel, IN CONST CHAR8 *LogData, IN UINTN L
 
 VOID EFIAPI MemoryLogPrint(IN CONST CHAR8 *Format, ...)
 {
-    if (gMemoryLogBufferAddress == 0 || Format == NULL)
+    if (gMemoryLogBufferAddress == 0)
     {
         return;
     }
@@ -157,7 +148,7 @@ VOID EFIAPI MemoryLogPrintEx(IN UINT8 LogLevel, IN CONST CHAR8 *Format, ...)
         return;
     }
 
-    if (LogLevel < MEMORY_LOG_MIN_LEVEL)
+    if (LogLevel > MEMORY_LOG_MIN_LEVEL)
     {
         return;
     }
@@ -223,10 +214,7 @@ VOID EFIAPI ClearMemoryLog(VOID)
         gMemoryLogTimestamp = 0;
         gMemoryLogDroppedEntries = 0;
 
-// Log the clear operation
-#ifdef SERIAL_LOG
-        SerialPrintf("\033[1;33m(I) [MEMLOG] Memory log buffer cleared\n\033[0;39;49m");
-#endif
+        // Log the clear operation
     }
 }
 

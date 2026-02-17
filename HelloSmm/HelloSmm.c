@@ -186,9 +186,42 @@ EFI_STATUS EFIAPI HelloSmmInitialize(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TA
     EFI_STATUS status;
     EFI_HANDLE dispatchHandle;
 
-    EFI_SYSTEM_TABLE *lST = SystemTable;
-    // EFI_RUNTIME_SERVICES *lRS = SystemTable->RuntimeServices;
+    // EFI_SYSTEM_TABLE *lST = SystemTable;
+    EFI_RUNTIME_SERVICES *lRS = SystemTable->RuntimeServices;
     EFI_BOOT_SERVICES *lBS = SystemTable->BootServices;
+
+    // =====================================================
+    // First: Determine if we are in SMM
+    // =====================================================
+
+    BOOLEAN bInSmram = FALSE;
+    EFI_SMM_BASE2_PROTOCOL *SmmBase = NULL;
+
+    status = lBS->LocateProtocol(&gEfiSmmBase2ProtocolGuid, NULL, (VOID **)&SmmBase);
+
+    if (EFI_ERROR(status))
+    {
+        return status;
+    }
+
+    SmmBase->InSmm(SmmBase, &bInSmram);
+
+    if (!bInSmram)
+    {
+        // We will return as we dont need to setup anything in dxe phase.
+        return EFI_SUCCESS;
+    }
+
+    // =====================================================
+    // We are now running in SMRAM context.
+    // All global variable writes go to the SMRAM copy.
+    // =====================================================
+    status = SmmBase->GetSmstLocation(SmmBase, &gSmst);
+
+    if (EFI_ERROR(status))
+    {
+        return status;
+    }
 
     // ***************************************************
     // * Initialize Memory Logging
@@ -204,7 +237,7 @@ EFI_STATUS EFIAPI HelloSmmInitialize(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TA
     // ***************************************************
     if (gMemoryLogBufferAddress != 0)
     {
-        status = lST->RuntimeServices->SetVariable(
+        status = lRS->SetVariable(
             L"PloutonLogAddress",
             &gPloutonLogAddressGuid,
             EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
@@ -222,36 +255,10 @@ EFI_STATUS EFIAPI HelloSmmInitialize(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TA
         }
     }
 
-    LOG_INFO("[HelloSmm] HelloSmmInitialize called\n");
-
-    DEBUG((EFI_D_INFO, "[HelloSmm] HelloSmmInitialize called\n"));
+    LOG_INFO("[HelloSmm] HelloSmmInitialize called (in SMRAM)\n");
 
     status = gMmst->MmLocateProtocol(&gEfiMmCpuIoProtocolGuid, NULL, (VOID **)&mMmCpuIo);
     ASSERT_EFI_ERROR(status);
-    BOOLEAN bInSmram = FALSE;
-    EFI_SMM_BASE2_PROTOCOL *SmmBase = NULL;
-
-    status = lBS->LocateProtocol(&gEfiSmmBase2ProtocolGuid, NULL, (PVOID *)&SmmBase);
-    if (status == EFI_SUCCESS)
-    {
-        // check if infected driver is running in SMM
-        SmmBase->InSmm(SmmBase, &bInSmram);
-
-        if (bInSmram)
-        {
-            LOG_INFO("Running in SMM\r\n");
-
-            status = SmmBase->GetSmstLocation(SmmBase, &gSmst);
-            if (status == EFI_SUCCESS)
-            {
-                LOG_INFO("SMM system table is at \r\n", gSmst);
-            }
-            else
-            {
-                LOG_INFO("GetSmstLocation() fails: 0x%X\r\n", status);
-            }
-        }
-    }
 
     //
     // Register the root SMI handler.
