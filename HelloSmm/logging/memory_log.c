@@ -5,6 +5,8 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/PrintLib.h>
 #include <Library/UefiLib.h>
+#include <include/Uefi/UefiSpec.h>
+#include <include/Uefi/UefiMultiPhase.h>
 
 // Global variables to hold the state of our memory logger
 EFI_PHYSICAL_ADDRESS gMemoryLogBufferAddress = 0;

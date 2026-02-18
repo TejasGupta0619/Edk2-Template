@@ -33,18 +33,18 @@ EFI_SMM_PERIODIC_TIMER_REGISTER_CONTEXT m_PeriodicTimerDispatch2RegCtx = {100000
 
 EFI_STATUS EFIAPI PeriodicTimerDispatch2Handler(EFI_HANDLE DispatchHandle, CONST VOID *Context, VOID *CommBuffer, UINTN *CommBufferSize)
 {
-    EFI_STATUS Status = EFI_SUCCESS;
+    EFI_STATUS status = EFI_SUCCESS;
     EFI_SMM_CPU_PROTOCOL *SmmCpu = NULL;
 
     // obtain SMM CPU protocol
-    Status = gSmst->SmmLocateProtocol(&gEfiSmmCpuProtocolGuid, NULL, (PVOID *)&SmmCpu);
-    if (Status == EFI_SUCCESS)
+    status = gSmst->SmmLocateProtocol(&gEfiSmmCpuProtocolGuid, NULL, (PVOID *)&SmmCpu);
+    if (status == EFI_SUCCESS)
     {
         LOG_INFO("Periodic Smi called");
     }
     else
     {
-        LOG_INFO("LocateProtocol() fails: 0x%X\r\n", Status);
+        LOG_INFO("LocateProtocol() fails: 0x%X\r\n", status);
     }
 
     return EFI_SUCCESS;
@@ -52,7 +52,7 @@ EFI_STATUS EFIAPI PeriodicTimerDispatch2Handler(EFI_HANDLE DispatchHandle, CONST
 //--------------------------------------------------------------------------------------
 EFI_STATUS PeriodicTimerDispatch2Register(EFI_HANDLE *DispatchHandle)
 {
-    EFI_STATUS Status = EFI_INVALID_PARAMETER;
+    EFI_STATUS status = EFI_INVALID_PARAMETER;
 
     if (m_PeriodicTimerDispatch == NULL)
     {
@@ -67,26 +67,26 @@ EFI_STATUS PeriodicTimerDispatch2Register(EFI_HANDLE *DispatchHandle)
     }
 
     // register periodic timer routine
-    Status = m_PeriodicTimerDispatch->Register(
+    status = m_PeriodicTimerDispatch->Register(
         m_PeriodicTimerDispatch,
         PeriodicTimerDispatch2Handler,
         &m_PeriodicTimerDispatch2RegCtx,
         DispatchHandle);
-    if (Status == EFI_SUCCESS)
+    if (status == EFI_SUCCESS)
     {
         LOG_INFO("[Timer] Handler registered OK, handle=0x%p\r\n", *DispatchHandle);
     }
     else
     {
-        LOG_INFO("[Timer] Register() ERROR 0x%X\r\n", Status);
+        LOG_INFO("[Timer] Register() ERROR 0x%X\r\n", status);
     }
 
-    return Status;
+    return status;
 }
 //--------------------------------------------------------------------------------------
 EFI_STATUS PeriodicTimerDispatch2Unregister(EFI_HANDLE DispatchHandle)
 {
-    EFI_STATUS Status = EFI_INVALID_PARAMETER;
+    EFI_STATUS status = EFI_INVALID_PARAMETER;
 
     if (m_PeriodicTimerDispatch == NULL)
     {
@@ -94,39 +94,80 @@ EFI_STATUS PeriodicTimerDispatch2Unregister(EFI_HANDLE DispatchHandle)
     }
 
     // unregister periodic timer routine
-    Status = m_PeriodicTimerDispatch->UnRegister(
+    status = m_PeriodicTimerDispatch->UnRegister(
         m_PeriodicTimerDispatch,
         DispatchHandle);
-    if (Status == EFI_SUCCESS)
+    if (status == EFI_SUCCESS)
     {
         LOG_INFO("SMM timer handler unregistered\r\n");
     }
     else
     {
-        LOG_INFO("Unregister() fails: 0x%X\r\n", Status);
+        LOG_INFO("Unregister() fails: 0x%X\r\n", status);
     }
 
-    return Status;
+    return status;
 }
 //--------------------------------------------------------------------------------------
 EFI_STATUS EFIAPI PeriodicTimerDispatch2ProtocolNotifyHandler(CONST EFI_GUID *Protocol, VOID *Interface, EFI_HANDLE Handle)
 {
-    EFI_STATUS Status = EFI_SUCCESS;
+    EFI_STATUS status = EFI_SUCCESS;
+
+    if (m_PeriodicTimerDispatch)
+    {
+        LOG_INFO("[Timer] Already registered, skipping\n");
+        return EFI_SUCCESS;
+    }
 
     // obtain target protocol
-    m_PeriodicTimerDispatch =
-        (EFI_SMM_PERIODIC_TIMER_DISPATCH2_PROTOCOL *)Interface;
+    m_PeriodicTimerDispatch = (EFI_SMM_PERIODIC_TIMER_DISPATCH2_PROTOCOL *)Interface;
+
+    // Query supported intervals first
+    UINT64 *SmiTickTime = NULL;
+
+    LOG_INFO("[Timer] Enumerating supported intervals:\n");
+
+    status = m_PeriodicTimerDispatch->GetNextShorterInterval(m_PeriodicTimerDispatch, &SmiTickTime);
+    if (EFI_ERROR(status))
+    {
+        LOG_INFO("[Timer] Smi Longest Interval is %lld\n", SmiTickTime ? *SmiTickTime : 0);
+    }
+
+    while (SmiTickTime != NULL)
+    {
+        status = m_PeriodicTimerDispatch->GetNextShorterInterval(m_PeriodicTimerDispatch, &SmiTickTime);
+        LOG_INFO("[Timer] Supported Intervals %lld\n", *SmiTickTime);
+    }
+
+    SmiTickTime = NULL;
+    m_PeriodicTimerDispatch->GetNextShorterInterval(m_PeriodicTimerDispatch, &SmiTickTime);
+
+    if (SmiTickTime == NULL)
+    {
+        LOG_INFO("[Timer] No supported intervals found");
+        return EFI_UNSUPPORTED;
+    }
+
+    m_PeriodicTimerDispatch2RegCtx.Period = *SmiTickTime;
+    m_PeriodicTimerDispatch2RegCtx.SmiTickInterval = *SmiTickTime;
+
+    LOG_INFO("[Timer] Registering with period %lld \n", *SmiTickTime);
 
     // enable periodic timer SMI
     // PeriodicTimerDispatch2Register(&m_PeriodicTimerDispatchHandle);
-    Status = PeriodicTimerDispatch2Register(
-        &m_PeriodicTimerDispatchHandle);
+    // status = PeriodicTimerDispatch2Register(&m_PeriodicTimerDispatchHandle);
 
-    if (EFI_ERROR(Status))
+    status = m_PeriodicTimerDispatch->Register(m_PeriodicTimerDispatch, PeriodicTimerDispatch2Handler, &m_PeriodicTimerDispatch2RegCtx, &m_PeriodicTimerDispatchHandle);
+
+    if (EFI_ERROR(status))
     {
-        LOG_INFO("[Notify] Failed to register timer: 0x%X\r\n", Status);
+        LOG_INFO("[Notify] Failed to register timer: 0x%X\r\n", status);
+        m_PeriodicTimerDispatch = NULL;
     }
-
+    else
+    {
+        LOG_INFO("[Timer] Register returned: %x%X , handle: 0x%p \n", status, m_PeriodicTimerDispatch);
+    }
     return EFI_SUCCESS;
 }
 //--------------------------------------------------------------------------------------
@@ -155,11 +196,14 @@ EFI_STATUS EFIAPI SmiHandler(IN EFI_HANDLE DispatchHandle, IN CONST VOID *Regist
 
     if (commandNumber == 0x33)
     {
+        if (m_PeriodicTimerDispatch)
+        {
+            LOG_INFO("Periodic timer already registered \n");
+            goto Exit;
+        }
+
         PVOID Registration = NULL;
-        status = gSmst->SmmRegisterProtocolNotify(
-            &gEfiSmmPeriodicTimerDispatch2ProtocolGuid,
-            PeriodicTimerDispatch2ProtocolNotifyHandler,
-            &Registration);
+        status = gSmst->SmmRegisterProtocolNotify(&gEfiSmmPeriodicTimerDispatch2ProtocolGuid, PeriodicTimerDispatch2ProtocolNotifyHandler, &Registration);
         if (status == EFI_SUCCESS)
         {
             LOG_INFO("SMM protocol notify handler is at PeriodicTimerDispatch2ProtocolNotifyHandler \r\n");
@@ -246,7 +290,7 @@ EFI_STATUS EFIAPI HelloSmmInitialize(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TA
 
         if (EFI_ERROR(status))
         {
-            LOG_ERROR("[HelloSmm] Failed to set UEFI variable for log address. Status: %r\n", status);
+            LOG_ERROR("[HelloSmm] Failed to set UEFI variable for log address. status: %r\n", status);
             // This is not a fatal error, the log still works, but it will be hard to find.
         }
         else
@@ -265,6 +309,17 @@ EFI_STATUS EFIAPI HelloSmmInitialize(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TA
     //
     status = gMmst->MmiHandlerRegister(SmiHandler, NULL, &dispatchHandle);
     ASSERT_EFI_ERROR(status);
+
+    PVOID Registration = NULL;
+    status = gSmst->SmmRegisterProtocolNotify(&gEfiSmmPeriodicTimerDispatch2ProtocolGuid, PeriodicTimerDispatch2ProtocolNotifyHandler, &Registration);
+    if (EFI_ERROR(status))
+    {
+        LOG_ERROR("[Timer] Protocol notify register failed: 0x%X\n", status);
+    }
+    else
+    {
+        LOG_INFO("[Timer] Protocol notify registered, waiting for dispatch protocol\n");
+    }
 
     return status;
 }
